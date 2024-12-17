@@ -1,0 +1,71 @@
+import unittest
+from src import Grammar, Earley
+
+
+class TestEarley(unittest.TestCase):
+    def test_basic(self):
+        g = Grammar(['S'], ['a', 'b'], 'S')
+        g.add_rule('S', 'aSb')
+        g.add_rule('S', '')
+        p = Earley(g)
+        self.assertTrue(p.predict(""))
+        self.assertTrue(p.predict("ab"))
+        self.assertTrue(p.predict("aabb"))
+        self.assertTrue(p.predict("aaaaaabbbbbb"))
+        self.assertFalse(p.predict("a"))
+        self.assertFalse(p.predict("b"))
+        self.assertFalse(p.predict("abb"))
+        self.assertFalse(p.predict("aaabbbb"))
+
+    def test_math(self):
+        g = Grammar(list('SMT'), list('0123456789+*'), 'S')
+        g.add_rule('S', 'S+M')
+        g.add_rule('S', 'M')
+        g.add_rule('M', 'M*T')
+        g.add_rule('M', 'T')
+        for digit in list('0123456789'):
+            g.add_rule('T', digit)
+        p = Earley(g)
+        self.assertTrue(p.predict("1"))
+        self.assertTrue(p.predict("1*4"))
+        self.assertTrue(p.predict("4+5*0"))
+        self.assertTrue(p.predict("1+4+7*0"))
+        self.assertFalse(p.predict(""))
+        self.assertFalse(p.predict("1**1"))
+        self.assertFalse(p.predict("1*+1"))
+        self.assertFalse(p.predict("1+*1"))
+        self.assertFalse(p.predict("1++1"))
+        self.assertFalse(p.predict("+1*"))
+        self.assertFalse(p.predict("+1*1"))
+
+    def test_bbs(self):
+        g = Grammar(['S'], list('()'), 'S')
+        g.add_rule('S', '')
+        g.add_rule('S', '(S)S')
+        p = Earley(g)
+        self.assertTrue(p.predict(""))
+        self.assertTrue(p.predict("()()"))
+        self.assertTrue(p.predict("((()))"))
+        self.assertTrue(p.predict("()(())(()(()()))"))
+        self.assertFalse(p.predict(")"))
+        self.assertFalse(p.predict("("))
+        self.assertFalse(p.predict(")()("))
+        self.assertFalse(p.predict("()(()((()))"))
+
+    def test_large(self):
+        g = Grammar(['S', 'T'], ['a', 'b'], 'S')
+        g.add_rule('S', 'aSb')
+        g.add_rule('S', 'T')
+        g.add_rule('T', '')
+        g.add_rule('T', 'Ta')
+        p = Earley(g)
+        self.assertTrue(p.predict(''))
+        self.assertTrue(p.predict('aaabbb'))
+        self.assertTrue(p.predict('aaaaabb'))
+        self.assertFalse(p.predict('aabbb'))
+        self.assertFalse(p.predict('ba'))
+        self.assertTrue(p.predict('a' * 100 + 'b' * 100))
+        self.assertTrue(p.predict('a' * 100 + 'b' * 50))
+        self.assertTrue(p.predict('a' * 100))
+        self.assertFalse(p.predict('a' * 50 + 'b' * 100))
+        self.assertFalse(p.predict('b' * 100))
